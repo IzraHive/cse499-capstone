@@ -6,6 +6,7 @@ using GAMS.API.Models;
 using GAMS.API.Data;
 using GAMS.API.Services;
 using GAMS.API.DTOs;
+
 namespace GAMS.API.Controllers;
 
 [ApiController]
@@ -22,7 +23,7 @@ public class ApplicationsController : ControllerBase
         IWorkflowService workflow, UserManager<ApplicationUser> um)
     { _db = db; _email = email; _workflow = workflow; _um = um; }
 
-    // POST /api/applications — submit new application (Applicant only)
+    // POST /api/applications — Applicant submits for themselves
     [HttpPost]
     [Authorize(Roles = "Applicant")]
     public async Task<IActionResult> Submit([FromBody] SubmitApplicationDto dto)
@@ -31,25 +32,26 @@ public class ApplicationsController : ControllerBase
         if (user == null) return Unauthorized();
 
         var app = new GrantApplication {
-            ApplicantId      = user.Id,
-            ApplicantName    = user.FullName,
-            Parish           = dto.Parish,
-            Constituency     = dto.Constituency,
-            GrantType        = dto.GrantType,
-            GrantDescription = dto.GrantDescription,
-            Reason           = dto.Reason,
-            Status           = "Submitted"
+            ApplicantId              = user.Id,
+            ApplicantName            = user.FullName,
+            ApplicantDateOfBirth     = dto.DateOfBirth,
+            ApplicantGender          = dto.Gender,
+            ApplicantTRN             = dto.TRN,
+            ApplicantContactNumber   = dto.ContactNumber,
+            Parish                   = dto.Parish,
+            Constituency             = dto.Constituency,
+            GrantType                = dto.GrantType,
+            GrantDescription         = dto.GrantDescription,
+            Reason                   = dto.Reason,
+            Status                   = "Submitted",
+            IsStaffSubmission        = false
         };
         _db.GrantApplications.Add(app);
         await _db.SaveChangesAsync();
 
         _db.AuditLogs.Add(new AuditLog {
-            GrantApplicationId = app.Id,
-            UserId     = user.Id,
-            UserName   = user.FullName,
-            Action     = "Application Submitted",
-            PreviousStatus = "",
-            NewStatus      = "Submitted"
+            GrantApplicationId = app.Id, UserId = user.Id, UserName = user.FullName,
+            Action = "Application Submitted", PreviousStatus = "", NewStatus = "Submitted"
         });
         await _db.SaveChangesAsync();
 
@@ -60,7 +62,47 @@ public class ApplicationsController : ControllerBase
         return Ok(new { app.Id, app.Status, message = "Application submitted successfully" });
     }
 
-    // PUT /api/applications/{id}/status — update workflow status
+    // POST /api/applications/staff-submit — Worker or Admin submits on behalf of unregistered applicant
+    [HttpPost("staff-submit")]
+    [Authorize(Roles = "SocialWorker,Admin")]
+    public async Task<IActionResult> StaffSubmit([FromBody] StaffSubmitApplicationDto dto)
+    {
+        var staff = await _um.GetUserAsync(User);
+        if (staff == null) return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(dto.ApplicantFullName))
+            return BadRequest(new { message = "Applicant full name is required." });
+
+        var app = new GrantApplication {
+            ApplicantId              = staff.Id,   // linked to staff account
+            ApplicantName            = dto.ApplicantFullName,
+            ApplicantDateOfBirth     = dto.DateOfBirth,
+            ApplicantGender          = dto.Gender,
+            ApplicantTRN             = dto.TRN,
+            ApplicantContactNumber   = dto.ContactNumber,
+            Parish                   = dto.Parish,
+            Constituency             = dto.Constituency,
+            GrantType                = dto.GrantType,
+            GrantDescription         = dto.GrantDescription,
+            Reason                   = dto.Reason,
+            Status                   = "Submitted",
+            IsStaffSubmission        = true,
+            StaffSubmittedForName    = dto.ApplicantFullName
+        };
+        _db.GrantApplications.Add(app);
+        await _db.SaveChangesAsync();
+
+        _db.AuditLogs.Add(new AuditLog {
+            GrantApplicationId = app.Id, UserId = staff.Id, UserName = staff.FullName,
+            Action = $"Application submitted on behalf of {dto.ApplicantFullName}",
+            PreviousStatus = "", NewStatus = "Submitted"
+        });
+        await _db.SaveChangesAsync();
+
+        return Ok(new { app.Id, app.Status, message = $"Application submitted for {dto.ApplicantFullName}" });
+    }
+
+    // PUT /api/applications/{id}/status
     [HttpPut("{id}/status")]
     [Authorize(Roles = "SocialWorker,Admin,Finance")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusDto dto)
@@ -82,27 +124,28 @@ public class ApplicationsController : ControllerBase
         if (dto.Justification != null) app.DecisionJustification = dto.Justification;
 
         _db.AuditLogs.Add(new AuditLog {
-            GrantApplicationId = id,
-            UserId     = user!.Id,
-            UserName   = user.FullName,
-            Action     = $"Status changed to {dto.NewStatus}",
-            PreviousStatus = prev,
-            NewStatus      = dto.NewStatus
+            GrantApplicationId = id, UserId = user!.Id, UserName = user.FullName,
+            Action = $"Status changed to {dto.NewStatus}",
+            PreviousStatus = prev, NewStatus = dto.NewStatus
         });
         await _db.SaveChangesAsync();
 
-        var toEmail = app.Applicant?.Email ?? "";
-        var toName  = app.Applicant?.FullName ?? "Applicant";
-        if (dto.NewStatus is "Approved" or "Declined")
-            await _email.SendDecisionAsync(toEmail, toName, id, dto.NewStatus,
-                dto.Justification ?? "No justification provided");
-        else
-            await _email.SendStatusChangeAsync(toEmail, toName, id, dto.NewStatus);
+        // Send email to applicant if they have an account
+        if (app.Applicant != null && !string.IsNullOrEmpty(app.Applicant.Email))
+        {
+            var toEmail = app.Applicant.Email;
+            var toName  = app.ApplicantName;
+            if (dto.NewStatus is "Approved" or "Declined")
+                await _email.SendDecisionAsync(toEmail, toName, id, dto.NewStatus,
+                    dto.Justification ?? "No justification provided");
+            else
+                await _email.SendStatusChangeAsync(toEmail, toName, id, dto.NewStatus);
+        }
 
         return Ok(new { app.Id, app.Status });
     }
 
-    // GET /api/applications — list (Applicant sees own, others see all)
+    // GET /api/applications
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? status    = null,
@@ -119,7 +162,7 @@ public class ApplicationsController : ControllerBase
             .Include(a => a.AuditLogs);
 
         if (roles.Contains("Applicant"))
-            q = q.Where(a => a.ApplicantId == user!.Id);
+            q = q.Where(a => a.ApplicantId == user!.Id && !a.IsStaffSubmission);
         if (!string.IsNullOrEmpty(status))
             q = q.Where(a => a.Status == status);
         if (!string.IsNullOrEmpty(applicant))
@@ -135,8 +178,10 @@ public class ApplicationsController : ControllerBase
 
         return Ok(apps.Select(a => new {
             a.Id, a.ApplicantId, a.ApplicantName,
+            a.ApplicantDateOfBirth, a.ApplicantGender, a.ApplicantTRN, a.ApplicantContactNumber,
             a.Parish, a.Constituency, a.GrantType, a.GrantDescription,
             a.Reason, a.Status, a.SubmittedAt, a.DecisionJustification,
+            a.IsStaffSubmission, a.StaffSubmittedForName,
             documentCount = a.Documents.Count,
             auditLogs = a.AuditLogs.OrderBy(l => l.Timestamp).Select(l => new {
                 l.Id, l.Action, l.PreviousStatus, l.NewStatus, l.Timestamp, l.UserName
@@ -154,9 +199,11 @@ public class ApplicationsController : ControllerBase
             .FirstOrDefaultAsync(a => a.Id == id);
         if (app == null) return NotFound();
         return Ok(new {
-            app.Id, app.ApplicantId, app.ApplicantName,
+            app.Id, app.ApplicantName,
+            app.ApplicantDateOfBirth, app.ApplicantGender, app.ApplicantTRN, app.ApplicantContactNumber,
             app.Parish, app.Constituency, app.GrantType, app.GrantDescription,
             app.Reason, app.Status, app.SubmittedAt, app.DecisionJustification,
+            app.IsStaffSubmission, app.StaffSubmittedForName,
             documents = app.Documents.Select(d => new {
                 d.Id, d.FileName, d.ContentType, d.FileSize, d.UploadedAt, d.UploadedByName
             }),
@@ -166,7 +213,7 @@ public class ApplicationsController : ControllerBase
         });
     }
 
-    // GET /api/applications/stats — admin dashboard numbers
+    // GET /api/applications/stats
     [HttpGet("stats")]
     [Authorize(Roles = "Admin,SocialWorker")]
     public async Task<IActionResult> GetStats()
@@ -179,10 +226,14 @@ public class ApplicationsController : ControllerBase
             approved      = all.Count(a => a.Status == "Approved"),
             declined      = all.Count(a => a.Status == "Declined"),
             paymentIssued = all.Count(a => a.Status == "Payment Issued"),
+            staffSubmissions = all.Count(a => a.IsStaffSubmission),
             byParish    = all.GroupBy(a => a.Parish)
-                             .Select(g => new { parish = g.Key, count = g.Count() }),
+                             .Select(g => new { parish = g.Key, count = g.Count() })
+                             .OrderByDescending(x => x.count),
             byGrantType = all.GroupBy(a => a.GrantType)
                              .Select(g => new { grantType = g.Key, count = g.Count() }),
+            byStatus    = all.GroupBy(a => a.Status)
+                             .Select(g => new { status = g.Key, count = g.Count() }),
             recentByDay = all.Where(a => a.SubmittedAt >= DateTime.UtcNow.AddDays(-30))
                              .GroupBy(a => a.SubmittedAt.Date.ToString("yyyy-MM-dd"))
                              .Select(g => new { date = g.Key, count = g.Count() })
@@ -190,7 +241,7 @@ public class ApplicationsController : ControllerBase
         });
     }
 
-    // GET /api/applications/auditlog — all audit entries (admin)
+    // GET /api/applications/auditlog
     [HttpGet("auditlog")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAuditLog()
