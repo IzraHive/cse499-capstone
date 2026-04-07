@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAMS — My Applications</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8}
+    header{background:#1a3a5c;color:#fff;padding:0 28px;height:62px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+    .hl{display:flex;align-items:center;gap:14px}
+    .logo{font-size:21px;font-weight:700;letter-spacing:2px}
+    .sub{font-size:12px;color:#a8c4e0}
+    .hr{display:flex;align-items:center;gap:10px}
+    .uname{font-size:13px;color:#a8c4e0}
+    .btn{padding:8px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;text-decoration:none;display:inline-block}
+    .btn-p{background:#2c7be5;color:#fff}.btn-p:hover{background:#1a5fc7}
+    .btn-d{background:#c0392b;color:#fff}.btn-d:hover{background:#a93226}
+    .container{padding:28px;max-width:1100px;margin:0 auto}
+    .title{font-size:22px;font-weight:700;color:#1a3a5c;margin-bottom:22px}
+    .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    thead{background:#1a3a5c}
+    th{padding:12px 14px;text-align:left;color:#fff;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+    td{padding:12px 14px;border-bottom:1px solid #edf0f5;font-size:13px;color:#333;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#f8fafc}
+    .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+    .bs{background:#e8f4fd;color:#1a3a5c}.bu{background:#fff8e1;color:#7f5000}
+    .ba{background:#e8f5e9;color:#1e5c2e}.bd{background:#ffebee;color:#8b0000}
+    .bp{background:#f3e5f5;color:#4a148c}.bx{background:#f0f4f8;color:#555}
+    .doc-badge{background:#e8f5e9;color:#1e5c2e;padding:2px 8px;border-radius:10px;font-size:11px}
+    .empty{padding:48px;text-align:center;color:#999;font-size:15px}
+    .btn-sm{padding:5px 12px;border:none;border-radius:5px;cursor:pointer;font-size:12px;font-weight:600}
+    .btn-upload{background:#e8f4fd;color:#1a3a5c}
+    .btn-upload:hover{background:#bee3f8}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hl"><span class="logo">GAMS</span><span class="sub">Grant Application Management System</span></div>
+    <div class="hr">
+      <span class="uname" id="userName"></span>
+      <a href="/apply.html" class="btn btn-p">+ New Application</a>
+      <button class="btn btn-d" onclick="logout()">Logout</button>
+    </div>
+  </header>
+  <div class="container">
+    <div class="title">My Applications</div>
+    <div class="card">
+      <table>
+        <thead><tr><th>#</th><th>Parish</th><th>Constituency</th><th>Grant Type</th><th>Description</th><th>Date Submitted</th><th>Status</th><th>Docs</th><th>Action</th></tr></thead>
+        <tbody id="list"><tr><td colspan="9" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Upload modal -->
+  <div id="uploadModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <h3 style="color:#1a3a5c;margin-bottom:16px">Upload Document</h3>
+      <p style="font-size:13px;color:#666;margin-bottom:16px">PDF, Word, JPG, PNG — max 10 MB</p>
+      <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+             style="width:100%;padding:10px;border:1.5px dashed #dde3ec;border-radius:8px;font-size:13px;margin-bottom:16px">
+      <div id="uploadMsg" style="font-size:13px;min-height:18px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="closeUpload()" style="padding:10px 20px;background:#f0f4f8;border:none;border-radius:6px;cursor:pointer;font-size:13px">Cancel</button>
+        <button onclick="doUpload()" style="padding:10px 20px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600">Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/auth.js"></script>
+  <script>
+    let currentAppId = null;
+
+    function bdg(s){const m={'Submitted':'bs','Under Review':'bu','Approved':'ba','Declined':'bd','Payment Issued':'bp'};return m[s]||'bx'}
+
+    async function init() {
+      const user = await requireApplicant();
+      if (!user) return;
+      document.getElementById('userName').textContent = user.fullName;
+      loadApps();
+    }
+
+    async function loadApps() {
+      const res  = await fetch(`${API}/applications`);
+      if (!res.ok) { document.getElementById('list').innerHTML='<tr><td colspan="9" class="empty">Error loading. Please refresh.</td></tr>'; return; }
+      const apps = await res.json();
+      const tbody = document.getElementById('list');
+      if (!apps.length){ tbody.innerHTML='<tr><td colspan="9" class="empty">No applications yet. Click "+ New Application" to get started.</td></tr>'; return; }
+      tbody.innerHTML = apps.map(a=>`<tr>
+        <td><strong>${a.id}</strong></td>
+        <td>${a.parish}</td><td>${a.constituency}</td>
+        <td>${a.grantType}</td><td>${a.grantDescription}</td>
+        <td>${new Date(a.submittedAt).toLocaleDateString('en-JM',{year:'numeric',month:'short',day:'numeric'})}</td>
+        <td><span class="badge ${bdg(a.status)}">${a.status}</span></td>
+        <td>${a.documentCount > 0 ? `<span class="doc-badge">${a.documentCount} file${a.documentCount>1?'s':''}</span>` : '<span style="color:#aaa;font-size:12px">None</span>'}</td>
+        <td><button class="btn-sm btn-upload" onclick="openUpload(${a.id})">+ Upload</button></td>
+      </tr>`).join('');
+    }
+
+    function openUpload(appId) {
+      currentAppId = appId;
+      document.getElementById('fileInput').value = '';
+      document.getElementById('uploadMsg').textContent = '';
+      document.getElementById('uploadModal').style.display = 'flex';
+    }
+
+    function closeUpload() {
+      document.getElementById('uploadModal').style.display = 'none';
+    }
+
+    async function doUpload() {
+      const file = document.getElementById('fileInput').files[0];
+      const msg  = document.getElementById('uploadMsg');
+      if (!file) { msg.style.color='#c0392b'; msg.textContent='Please select a file.'; return; }
+      msg.style.color='#555'; msg.textContent='Uploading...';
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`${API}/documents/upload/${currentAppId}`, {
+        method:'POST', body: fd
+      });
+      if (res.ok) {
+        msg.style.color='#1e5c2e'; msg.textContent='Uploaded successfully!';
+        setTimeout(()=>{ closeUpload(); loadApps(); }, 1000);
+      } else {
+        const e = await res.json().catch(()=>({}));
+        msg.style.color='#c0392b'; msg.textContent=e.message||'Upload failed.';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

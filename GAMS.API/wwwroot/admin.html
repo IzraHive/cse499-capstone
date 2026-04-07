@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAMS — Admin Dashboard</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8}
+    header{background:#1a3a5c;color:#fff;padding:0 28px;height:62px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+    .hl{display:flex;align-items:center;gap:14px}
+    .logo{font-size:21px;font-weight:700;letter-spacing:2px}
+    .sub{font-size:12px;color:#a8c4e0}
+    .hr{display:flex;align-items:center;gap:10px}
+    .uname{font-size:13px;color:#a8c4e0}
+    .btn-d{padding:8px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;background:#c0392b;color:#fff}
+    .container{padding:28px;max-width:1300px;margin:0 auto}
+    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px}
+    .sc{background:#fff;border-radius:10px;padding:18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:3px solid #1a3a5c}
+    .sc .n{font-size:32px;font-weight:700;color:#1a3a5c}
+    .sc .l{font-size:11px;color:#999;margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+    .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+    .filters select,.filters input{padding:8px 11px;border:1.5px solid #dde3ec;border-radius:6px;font-size:13px;font-family:inherit;outline:none;height:36px}
+    .filters input[type=date]{font-family:inherit}
+    .bf{padding:8px 16px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;height:36px}
+    .bc{padding:8px 14px;background:#f0f4f8;color:#555;border:1px solid #dde3ec;border-radius:6px;font-size:13px;cursor:pointer;height:36px}
+    .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;margin-bottom:28px}
+    table{width:100%;border-collapse:collapse}
+    thead{background:#1a3a5c}
+    th{padding:11px 13px;text-align:left;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+    td{padding:11px 13px;border-bottom:1px solid #edf0f5;font-size:13px;color:#333;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#f8fafc}
+    .badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+    .bs{background:#e8f4fd;color:#1a3a5c}.bu{background:#fff8e1;color:#7f5000}
+    .ba{background:#e8f5e9;color:#1e5c2e}.bd{background:#ffebee;color:#8b0000}
+    .bp{background:#f3e5f5;color:#4a148c}.bx{background:#f0f4f8;color:#555}
+    .ss{padding:5px 8px;border-radius:5px;border:1px solid #dde3ec;font-size:12px;font-family:inherit}
+    .sv{padding:5px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;margin-left:5px}
+    .sv:hover{background:#2c5282}
+    .empty{padding:36px;text-align:center;color:#999}
+    .tabs{display:flex;gap:2px;border-bottom:2px solid #e0e6ef;padding:0 20px}
+    .tab{padding:12px 20px;cursor:pointer;font-size:14px;font-weight:600;color:#888;border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .2s}
+    .tab.active{color:#1a3a5c;border-bottom-color:#1a3a5c}
+    .tc{display:none;padding:20px}.tc.active{display:block}
+    .doc-link{color:#1a3a5c;text-decoration:none;font-size:12px;background:#e8f4fd;padding:2px 8px;border-radius:4px;display:inline-block;margin:2px 0}
+    .doc-link:hover{background:#bee3f8}
+    .role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+    .r-a{background:#e8f5e9;color:#1e5c2e}.r-s{background:#fff8e1;color:#7f5000}
+    .r-ad{background:#e8f4fd;color:#1a3a5c}.r-f{background:#f3e5f5;color:#4a148c}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="hl"><span class="logo">GAMS</span><span class="sub">Admin Dashboard — <span id="roleLabel"></span></span></div>
+    <div class="hr">
+      <span class="uname" id="userName"></span>
+      <button class="btn-d" onclick="logout()">Logout</button>
+    </div>
+  </header>
+  <div class="container">
+    <div class="stats">
+      <div class="sc"><div class="n" id="sTotal">–</div><div class="l">Total</div></div>
+      <div class="sc"><div class="n" id="sSubmitted">–</div><div class="l">Submitted</div></div>
+      <div class="sc"><div class="n" id="sReview">–</div><div class="l">Under Review</div></div>
+      <div class="sc"><div class="n" id="sApproved">–</div><div class="l">Approved</div></div>
+      <div class="sc"><div class="n" id="sDeclined">–</div><div class="l">Declined</div></div>
+    </div>
+
+    <div class="card">
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('apps',this)">Applications</div>
+        <div class="tab" onclick="switchTab('audit',this)">Audit Log</div>
+        <div class="tab" id="usersTab" style="display:none" onclick="switchTab('users',this)">User Management</div>
+      </div>
+
+      <!-- Applications Tab -->
+      <div id="tab-apps" class="tc active">
+        <div class="filters">
+          <select id="fStatus">
+            <option value="">All Statuses</option>
+            <option>Submitted</option><option>Under Review</option>
+            <option>Submitted to Head Office</option><option>Under Head Office Review</option>
+            <option>Approved</option><option>Declined</option><option>Payment Issued</option>
+          </select>
+          <select id="fParish"><option value="">All Parishes</option></select>
+          <input type="text" id="fApplicant" placeholder="Search applicant...">
+          <input type="date" id="fFrom" title="From date">
+          <input type="date" id="fTo" title="To date">
+          <button class="bf" onclick="loadApps()">Search</button>
+          <button class="bc" onclick="clearF()">Clear</button>
+        </div>
+        <table>
+          <thead><tr><th>#</th><th>Applicant</th><th>Parish</th><th>Constituency</th><th>Grant Type</th><th>Description</th><th>Submitted</th><th>Status</th><th>Docs</th><th>Update Status</th></tr></thead>
+          <tbody id="appTable"><tr><td colspan="10" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- Audit Log Tab -->
+      <div id="tab-audit" class="tc">
+        <table>
+          <thead><tr><th>Timestamp</th><th>App #</th><th>User</th><th>Action</th><th>Previous</th><th>New Status</th></tr></thead>
+          <tbody id="auditTable"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- User Management Tab (Admin only) -->
+      <div id="tab-users" class="tc">
+        <div style="max-width:500px">
+          <h3 style="color:#1a3a5c;margin-bottom:16px;font-size:16px">Assign Role to User</h3>
+          <p style="font-size:13px;color:#666;margin-bottom:16px">Users register as Applicants by default. Use this to promote staff accounts.</p>
+          <label style="font-size:12px;font-weight:600;color:#666;display:block;margin-bottom:5px">USER EMAIL</label>
+          <input type="email" id="roleEmail" placeholder="user@email.com"
+                 style="width:100%;padding:10px 13px;border:1.5px solid #e0e6ef;border-radius:7px;font-size:14px;outline:none;margin-bottom:12px">
+          <label style="font-size:12px;font-weight:600;color:#666;display:block;margin-bottom:5px">ASSIGN ROLE</label>
+          <select id="roleSelect" style="width:100%;padding:10px 13px;border:1.5px solid #e0e6ef;border-radius:7px;font-size:14px;outline:none;margin-bottom:16px">
+            <option value="Applicant">Applicant</option>
+            <option value="SocialWorker">Social Worker</option>
+            <option value="Admin">Admin</option>
+            <option value="Finance">Finance</option>
+          </select>
+          <div id="roleMsg" style="font-size:13px;min-height:18px;margin-bottom:12px"></div>
+          <button onclick="assignRole()" style="padding:11px 24px;background:#1a3a5c;color:#fff;border:none;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer">Assign Role</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/auth.js"></script>
+  <script>
+    const allS = ['Submitted','Under Review','Submitted to Head Office',
+                  'Under Head Office Review','Approved','Declined','Payment Issued'];
+    let currentUser = null;
+
+    function bdg(s){const m={'Submitted':'bs','Under Review':'bu','Approved':'ba','Declined':'bd','Payment Issued':'bp'};return m[s]||'bx'}
+
+    function switchTab(n, el) {
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('tab-'+n).classList.add('active');
+      if (n==='audit') loadAudit();
+    }
+
+    // Populate parish filter
+    const pf = document.getElementById('fParish');
+    Object.keys(PARISHES).sort().forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;pf.appendChild(o);});
+
+    async function init() {
+      currentUser = await requireStaff();
+      if (!currentUser) return;
+      document.getElementById('userName').textContent = currentUser.fullName;
+      const roles = currentUser.roles;
+      document.getElementById('roleLabel').textContent = roles.join(', ');
+      if (roles.includes('Admin')) {
+        document.getElementById('usersTab').style.display = 'block';
+      }
+      loadStats();
+      loadApps();
+    }
+
+    async function loadStats() {
+      const r = await fetch(`${API}/applications/stats`);
+      if (!r.ok) return;
+      const s = await r.json();
+      document.getElementById('sTotal').textContent     = s.total;
+      document.getElementById('sSubmitted').textContent = s.submitted;
+      document.getElementById('sReview').textContent    = s.underReview;
+      document.getElementById('sApproved').textContent  = s.approved;
+      document.getElementById('sDeclined').textContent  = s.declined;
+    }
+
+    async function loadApps() {
+      const status    = document.getElementById('fStatus').value;
+      const parish    = document.getElementById('fParish').value;
+      const applicant = document.getElementById('fApplicant').value;
+      const dateFrom  = document.getElementById('fFrom').value;
+      const dateTo    = document.getElementById('fTo').value;
+      let url = `${API}/applications?`;
+      if (status)    url += `status=${encodeURIComponent(status)}&`;
+      if (parish)    url += `parish=${encodeURIComponent(parish)}&`;
+      if (applicant) url += `applicant=${encodeURIComponent(applicant)}&`;
+      if (dateFrom)  url += `dateFrom=${encodeURIComponent(dateFrom)}&`;
+      if (dateTo)    url += `dateTo=${encodeURIComponent(dateTo)}&`;
+
+      const r    = await fetch(url);
+      if (!r.ok) { document.getElementById('appTable').innerHTML='<tr><td colspan="10" class="empty">Error loading.</td></tr>'; return; }
+      const apps = await r.json();
+      const tbody = document.getElementById('appTable');
+      if (!apps.length){ tbody.innerHTML='<tr><td colspan="10" class="empty">No applications found.</td></tr>'; return; }
+
+      const roles = currentUser ? currentUser.roles : [];
+
+      tbody.innerHTML = apps.map(a=>{
+        // Build document links
+        const docHtml = a.documentCount > 0
+          ? `<a href="${API}/documents/application/${a.id}" onclick="viewDocs(event,${a.id})" class="doc-link">📎 ${a.documentCount} file${a.documentCount>1?'s':''}</a>`
+          : '<span style="color:#ccc;font-size:12px">—</span>';
+
+        // Build status dropdown — only show if role can make transitions
+        const canUpdate = roles.includes('Admin') || roles.includes('SocialWorker') || roles.includes('Finance');
+        const statusControl = canUpdate ? `
+          <select class="ss" id="sel_${a.id}">
+            ${allS.map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
+          </select>
+          <button class="sv" onclick="updateStatus(${a.id})">Save</button>` : `<span class="badge ${bdg(a.status)}" style="font-size:12px">${a.status}</span>`;
+
+        return `<tr>
+          <td><strong>${a.id}</strong></td>
+          <td>${a.applicantName}</td>
+          <td>${a.parish}</td><td>${a.constituency}</td>
+          <td>${a.grantType}</td><td>${a.grantDescription}</td>
+          <td>${new Date(a.submittedAt).toLocaleDateString('en-JM',{year:'numeric',month:'short',day:'numeric'})}</td>
+          <td><span class="badge ${bdg(a.status)}">${a.status}</span></td>
+          <td>${docHtml}</td>
+          <td>${statusControl}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function viewDocs(e, appId) {
+      e.preventDefault();
+      const res  = await fetch(`${API}/documents/application/${appId}`);
+      const docs = await res.json();
+      if (!docs.length) { alert('No documents attached.'); return; }
+      const list = docs.map(d=>`• ${d.fileName} (${(d.fileSize/1024).toFixed(1)} KB) — ${new Date(d.uploadedAt).toLocaleDateString()} by ${d.uploadedByName}\n  Download: ${window.location.origin}${API}/documents/${d.id}`).join('\n\n');
+      alert(`Documents for Application #${appId}:\n\n${list}`);
+    }
+
+    function clearF(){
+      document.getElementById('fStatus').value='';
+      document.getElementById('fParish').value='';
+      document.getElementById('fApplicant').value='';
+      document.getElementById('fFrom').value='';
+      document.getElementById('fTo').value='';
+      loadApps();
+    }
+
+    async function updateStatus(id) {
+      const ns   = document.getElementById(`sel_${id}`).value;
+      const just = (ns==='Approved'||ns==='Declined') ? prompt(`Justification for "${ns}" decision (required):`)||'' : null;
+      if ((ns==='Approved'||ns==='Declined') && !just) { alert('Justification is required for Approved/Declined.'); return; }
+      const res = await fetch(`${API}/applications/${id}/status`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({newStatus:ns, justification:just})
+      });
+      if (res.ok) { loadApps(); loadStats(); }
+      else {
+        const e = await res.json().catch(()=>({}));
+        alert('Error: ' + (e.message || 'Unknown error'));
+      }
+    }
+
+    async function loadAudit() {
+      const r    = await fetch(`${API}/applications/auditlog`);
+      if (!r.ok) { document.getElementById('auditTable').innerHTML='<tr><td colspan="6" class="empty">Error loading audit log.</td></tr>'; return; }
+      const logs = await r.json();
+      const tbody = document.getElementById('auditTable');
+      if (!logs.length){ tbody.innerHTML='<tr><td colspan="6" class="empty">No audit entries yet.</td></tr>'; return; }
+      tbody.innerHTML = logs.map(l=>`<tr>
+        <td style="font-size:12px;white-space:nowrap">${new Date(l.timestamp).toLocaleString('en-JM')}</td>
+        <td>#${l.grantApplicationId}</td>
+        <td>${l.userName||l.userId.substring(0,8)}</td>
+        <td>${l.action}</td>
+        <td>${l.previousStatus||'—'}</td>
+        <td>${l.newStatus}</td>
+      </tr>`).join('');
+    }
+
+    async function assignRole() {
+      const email = document.getElementById('roleEmail').value.trim();
+      const role  = document.getElementById('roleSelect').value;
+      const msg   = document.getElementById('roleMsg');
+      if (!email) { msg.style.color='#c0392b'; msg.textContent='Please enter an email address.'; return; }
+      const res = await fetch(`${API}/auth/assign-role`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email, role})
+      });
+      const data = await res.json().catch(()=>({}));
+      if (res.ok) { msg.style.color='#1e5c2e'; msg.textContent=data.message||'Role assigned.'; }
+      else        { msg.style.color='#c0392b'; msg.textContent=data.message||'Failed to assign role.'; }
+    }
+
+    init();
+  </script>
+</body>
+</html>
