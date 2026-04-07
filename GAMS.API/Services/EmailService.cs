@@ -1,5 +1,6 @@
 using MailKit.Net.Smtp;
 using MimeKit;
+using System.Threading.Tasks;
 namespace GAMS.API.Services
 {
     public class EmailService : IEmailService
