@@ -1,7 +1,9 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
+using GAMS.API.Services;
 namespace GAMS.API.Services;
+
 public class EmailService : IEmailService
 {
     private readonly IConfiguration _config;
