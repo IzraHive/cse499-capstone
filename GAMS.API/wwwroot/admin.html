@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GAMS — Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8}
@@ -11,277 +12,691 @@
     .hl{display:flex;align-items:center;gap:14px}
     .logo{font-size:21px;font-weight:700;letter-spacing:2px}
     .sub{font-size:12px;color:#a8c4e0}
-    .hr{display:flex;align-items:center;gap:10px}
     .uname{font-size:13px;color:#a8c4e0}
     .btn-d{padding:8px 18px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;background:#c0392b;color:#fff}
-    .container{padding:28px;max-width:1300px;margin:0 auto}
-    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:28px}
+    .container{padding:24px 28px;max-width:1400px;margin:0 auto}
+    /* Stats */
+    .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
     .sc{background:#fff;border-radius:10px;padding:18px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06);border-top:3px solid #1a3a5c}
-    .sc .n{font-size:32px;font-weight:700;color:#1a3a5c}
+    .sc .n{font-size:30px;font-weight:700;color:#1a3a5c}
     .sc .l{font-size:11px;color:#999;margin-top:3px;text-transform:uppercase;letter-spacing:.5px}
+    /* Charts */
+    .charts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px}
+    .chart-card{background:#fff;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+    .chart-card h3{font-size:13px;font-weight:700;color:#1a3a5c;margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px}
+    .chart-card canvas{max-height:200px}
+    .chart-wide{grid-column:span 2}
+    /* Card and tabs */
+    .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:24px;overflow:hidden}
+    .tabs{display:flex;gap:2px;border-bottom:2px solid #e0e6ef;padding:0 20px;overflow-x:auto}
+    .tab{padding:12px 18px;cursor:pointer;font-size:13px;font-weight:600;color:#888;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap}
+    .tab.active{color:#1a3a5c;border-bottom-color:#1a3a5c}
+    .tc{display:none;padding:20px}.tc.active{display:block}
+    /* Filters */
     .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
     .filters select,.filters input{padding:8px 11px;border:1.5px solid #dde3ec;border-radius:6px;font-size:13px;font-family:inherit;outline:none;height:36px}
-    .filters input[type=date]{font-family:inherit}
     .bf{padding:8px 16px;background:#1a3a5c;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;height:36px}
     .bc{padding:8px 14px;background:#f0f4f8;color:#555;border:1px solid #dde3ec;border-radius:6px;font-size:13px;cursor:pointer;height:36px}
-    .card{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.07);overflow:hidden;margin-bottom:28px}
+    /* Table */
     table{width:100%;border-collapse:collapse}
     thead{background:#1a3a5c}
     th{padding:11px 13px;text-align:left;color:#fff;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-    td{padding:11px 13px;border-bottom:1px solid #edf0f5;font-size:13px;color:#333;vertical-align:middle}
+    td{padding:10px 13px;border-bottom:1px solid #edf0f5;font-size:13px;color:#333;vertical-align:middle}
     tr:last-child td{border-bottom:none}
     tr:hover td{background:#f8fafc}
+    /* Badges */
     .badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
     .bs{background:#e8f4fd;color:#1a3a5c}.bu{background:#fff8e1;color:#7f5000}
     .ba{background:#e8f5e9;color:#1e5c2e}.bd{background:#ffebee;color:#8b0000}
     .bp{background:#f3e5f5;color:#4a148c}.bx{background:#f0f4f8;color:#555}
+    .staff-badge{background:#fff3e0;color:#e65100;font-size:10px;padding:2px 6px;border-radius:8px}
+    /* Controls */
     .ss{padding:5px 8px;border-radius:5px;border:1px solid #dde3ec;font-size:12px;font-family:inherit}
     .sv{padding:5px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;margin-left:5px}
     .sv:hover{background:#2c5282}
+    .btn-sm{padding:4px 10px;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600}
+    .btn-del{background:#ffebee;color:#8b0000}.btn-del:hover{background:#ffcdd2}
+    .btn-pw{background:#e8f4fd;color:#1a3a5c}.btn-pw:hover{background:#bee3f8}
     .empty{padding:36px;text-align:center;color:#999}
-    .tabs{display:flex;gap:2px;border-bottom:2px solid #e0e6ef;padding:0 20px}
-    .tab{padding:12px 20px;cursor:pointer;font-size:14px;font-weight:600;color:#888;border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .2s}
-    .tab.active{color:#1a3a5c;border-bottom-color:#1a3a5c}
-    .tc{display:none;padding:20px}.tc.active{display:block}
-    .doc-link{color:#1a3a5c;text-decoration:none;font-size:12px;background:#e8f4fd;padding:2px 8px;border-radius:4px;display:inline-block;margin:2px 0}
-    .doc-link:hover{background:#bee3f8}
-    .role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
-    .r-a{background:#e8f5e9;color:#1e5c2e}.r-s{background:#fff8e1;color:#7f5000}
-    .r-ad{background:#e8f4fd;color:#1a3a5c}.r-f{background:#f3e5f5;color:#4a148c}
+    /* Forms */
+    .form-sec{max-width:600px}
+    .form-sec h3{color:#1a3a5c;margin-bottom:16px;font-size:16px;font-weight:600}
+    .form-sec p{font-size:13px;color:#666;margin-bottom:16px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+    .form-grp{margin-bottom:12px}
+    .form-grp label{display:block;font-size:11px;font-weight:700;color:#666;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+    .form-grp input,.form-grp select,.form-grp textarea{width:100%;padding:10px 12px;border:1.5px solid #e0e6ef;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
+    .form-grp input:focus,.form-grp select:focus,.form-grp textarea:focus{border-color:#1a3a5c}
+    .form-grp select:disabled{background:#f5f5f5;color:#aaa}
+    .form-grp textarea{height:80px;resize:vertical}
+    .status-msg{font-size:13px;min-height:18px;margin:10px 0;padding:8px 12px;border-radius:6px}
+    .s-ok{background:#e8f5e9;color:#1e5c2e}.s-err{background:#ffebee;color:#8b0000}
+    .btn-submit{padding:11px 24px;background:#1a3a5c;color:#fff;border:none;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer}
+    .btn-submit:hover{background:#2c5282}
+    .divider{margin:24px 0;border:none;border-top:2px solid #e8f0fa}
   </style>
 </head>
 <body>
-  <header>
-    <div class="hl"><span class="logo">GAMS</span><span class="sub">Admin Dashboard — <span id="roleLabel"></span></span></div>
-    <div class="hr">
-      <span class="uname" id="userName"></span>
-      <button class="btn-d" onclick="logout()">Logout</button>
+<header>
+  <div class="hl">
+    <span class="logo">GAMS</span>
+    <span class="sub">Dashboard — <span id="roleLabel"></span></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span class="uname" id="userName"></span>
+    <button class="btn-d" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="container">
+  <!-- STAT CARDS -->
+  <div class="stats">
+    <div class="sc"><div class="n" id="sTotal">–</div><div class="l">Total</div></div>
+    <div class="sc"><div class="n" id="sSubmitted">–</div><div class="l">Submitted</div></div>
+    <div class="sc"><div class="n" id="sReview">–</div><div class="l">Under Review</div></div>
+    <div class="sc"><div class="n" id="sApproved">–</div><div class="l">Approved</div></div>
+    <div class="sc"><div class="n" id="sDeclined">–</div><div class="l">Declined</div></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts">
+    <div class="chart-card">
+      <h3>Applications by Status</h3>
+      <canvas id="chartStatus"></canvas>
     </div>
-  </header>
-  <div class="container">
-    <div class="stats">
-      <div class="sc"><div class="n" id="sTotal">–</div><div class="l">Total</div></div>
-      <div class="sc"><div class="n" id="sSubmitted">–</div><div class="l">Submitted</div></div>
-      <div class="sc"><div class="n" id="sReview">–</div><div class="l">Under Review</div></div>
-      <div class="sc"><div class="n" id="sApproved">–</div><div class="l">Approved</div></div>
-      <div class="sc"><div class="n" id="sDeclined">–</div><div class="l">Declined</div></div>
+    <div class="chart-card">
+      <h3>Applications by Grant Type</h3>
+      <canvas id="chartGrantType"></canvas>
     </div>
-
-    <div class="card">
-      <div class="tabs">
-        <div class="tab active" onclick="switchTab('apps',this)">Applications</div>
-        <div class="tab" onclick="switchTab('audit',this)">Audit Log</div>
-        <div class="tab" id="usersTab" style="display:none" onclick="switchTab('users',this)">User Management</div>
-      </div>
-
-      <!-- Applications Tab -->
-      <div id="tab-apps" class="tc active">
-        <div class="filters">
-          <select id="fStatus">
-            <option value="">All Statuses</option>
-            <option>Submitted</option><option>Under Review</option>
-            <option>Submitted to Head Office</option><option>Under Head Office Review</option>
-            <option>Approved</option><option>Declined</option><option>Payment Issued</option>
-          </select>
-          <select id="fParish"><option value="">All Parishes</option></select>
-          <input type="text" id="fApplicant" placeholder="Search applicant...">
-          <input type="date" id="fFrom" title="From date">
-          <input type="date" id="fTo" title="To date">
-          <button class="bf" onclick="loadApps()">Search</button>
-          <button class="bc" onclick="clearF()">Clear</button>
-        </div>
-        <table>
-          <thead><tr><th>#</th><th>Applicant</th><th>Parish</th><th>Constituency</th><th>Grant Type</th><th>Description</th><th>Submitted</th><th>Status</th><th>Docs</th><th>Update Status</th></tr></thead>
-          <tbody id="appTable"><tr><td colspan="10" class="empty">Loading...</td></tr></tbody>
-        </table>
-      </div>
-
-      <!-- Audit Log Tab -->
-      <div id="tab-audit" class="tc">
-        <table>
-          <thead><tr><th>Timestamp</th><th>App #</th><th>User</th><th>Action</th><th>Previous</th><th>New Status</th></tr></thead>
-          <tbody id="auditTable"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
-        </table>
-      </div>
-
-      <!-- User Management Tab (Admin only) -->
-      <div id="tab-users" class="tc">
-        <div style="max-width:500px">
-          <h3 style="color:#1a3a5c;margin-bottom:16px;font-size:16px">Assign Role to User</h3>
-          <p style="font-size:13px;color:#666;margin-bottom:16px">Users register as Applicants by default. Use this to promote staff accounts.</p>
-          <label style="font-size:12px;font-weight:600;color:#666;display:block;margin-bottom:5px">USER EMAIL</label>
-          <input type="email" id="roleEmail" placeholder="user@email.com"
-                 style="width:100%;padding:10px 13px;border:1.5px solid #e0e6ef;border-radius:7px;font-size:14px;outline:none;margin-bottom:12px">
-          <label style="font-size:12px;font-weight:600;color:#666;display:block;margin-bottom:5px">ASSIGN ROLE</label>
-          <select id="roleSelect" style="width:100%;padding:10px 13px;border:1.5px solid #e0e6ef;border-radius:7px;font-size:14px;outline:none;margin-bottom:16px">
-            <option value="Applicant">Applicant</option>
-            <option value="SocialWorker">Social Worker</option>
-            <option value="Admin">Admin</option>
-            <option value="Finance">Finance</option>
-          </select>
-          <div id="roleMsg" style="font-size:13px;min-height:18px;margin-bottom:12px"></div>
-          <button onclick="assignRole()" style="padding:11px 24px;background:#1a3a5c;color:#fff;border:none;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer">Assign Role</button>
-        </div>
-      </div>
+    <div class="chart-card">
+      <h3>Top Parishes</h3>
+      <canvas id="chartParish"></canvas>
+    </div>
+    <div class="chart-card chart-wide">
+      <h3>Submissions (Last 30 Days)</h3>
+      <canvas id="chartTimeline"></canvas>
     </div>
   </div>
 
-  <script src="/auth.js"></script>
-  <script>
-    const allS = ['Submitted','Under Review','Submitted to Head Office',
-                  'Under Head Office Review','Approved','Declined','Payment Issued'];
-    let currentUser = null;
+  <!-- MAIN CARD WITH TABS -->
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('apps',this)">Applications</div>
+      <div class="tab" onclick="switchTab('audit',this)">Audit Log</div>
+      <div class="tab" id="tabSubmitFor" onclick="switchTab('submitfor',this)">Submit For Applicant</div>
+      <div class="tab" id="tabUsers" style="display:none" onclick="switchTab('users',this)">User Management</div>
+    </div>
 
-    function bdg(s){const m={'Submitted':'bs','Under Review':'bu','Approved':'ba','Declined':'bd','Payment Issued':'bp'};return m[s]||'bx'}
+    <!-- APPLICATIONS TAB -->
+    <div id="tab-apps" class="tc active">
+      <div class="filters">
+        <select id="fStatus">
+          <option value="">All Statuses</option>
+          <option>Submitted</option><option>Under Review</option>
+          <option>Submitted to Head Office</option><option>Under Head Office Review</option>
+          <option>Approved</option><option>Declined</option><option>Payment Issued</option>
+        </select>
+        <select id="fParish"><option value="">All Parishes</option></select>
+        <input type="text" id="fApplicant" placeholder="Search applicant...">
+        <input type="date" id="fFrom" title="From date">
+        <input type="date" id="fTo" title="To date">
+        <button class="bf" onclick="loadApps()">Search</button>
+        <button class="bc" onclick="clearF()">Clear</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Applicant</th><th>TRN</th><th>Contact</th>
+              <th>Parish</th><th>Grant Type</th><th>Description</th>
+              <th>Submitted</th><th>Status</th><th>Docs</th><th>Update</th>
+            </tr>
+          </thead>
+          <tbody id="appTable"><tr><td colspan="11" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
 
-    function switchTab(n, el) {
-      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-      document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
-      el.classList.add('active');
-      document.getElementById('tab-'+n).classList.add('active');
-      if (n==='audit') loadAudit();
+    <!-- AUDIT LOG TAB -->
+    <div id="tab-audit" class="tc">
+      <table>
+        <thead><tr><th>Timestamp</th><th>App #</th><th>Staff Member</th><th>Action</th><th>Previous</th><th>New Status</th></tr></thead>
+        <tbody id="auditTable"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- SUBMIT FOR APPLICANT TAB -->
+    <div id="tab-submitfor" class="tc">
+      <div class="form-sec">
+        <h3>Submit Application on Behalf of Applicant</h3>
+        <p>Use this form when submitting for an applicant who does not have an account. All fields are required.</p>
+
+        <div class="sec" style="font-size:12px;font-weight:700;color:#1a3a5c;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e8f0fa">Applicant Details</div>
+        <div class="form-row">
+          <div class="form-grp">
+            <label>Full Name *</label>
+            <input type="text" id="sf_name" placeholder="Applicant's full name">
+          </div>
+          <div class="form-grp">
+            <label>Date of Birth *</label>
+            <input type="date" id="sf_dob">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-grp">
+            <label>Gender *</label>
+            <select id="sf_gender">
+              <option value="">— Select —</option>
+              <option>Male</option><option>Female</option><option>Other</option><option>Prefer not to say</option>
+            </select>
+          </div>
+          <div class="form-grp">
+            <label>TRN *</label>
+            <input type="text" id="sf_trn" placeholder="000-000-000">
+          </div>
+        </div>
+        <div class="form-grp">
+          <label>Contact Number *</label>
+          <input type="tel" id="sf_contact" placeholder="876-XXX-XXXX">
+        </div>
+
+        <div class="divider"></div>
+        <div class="sec" style="font-size:12px;font-weight:700;color:#1a3a5c;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e8f0fa">Location</div>
+        <div class="form-row">
+          <div class="form-grp">
+            <label>Parish *</label>
+            <select id="sf_parish" onchange="onSfParish()"><option value="">— Select Parish —</option></select>
+          </div>
+          <div class="form-grp">
+            <label>Constituency *</label>
+            <select id="sf_const" disabled><option value="">— Select Parish First —</option></select>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="sec" style="font-size:12px;font-weight:700;color:#1a3a5c;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e8f0fa">Grant Information</div>
+        <div class="form-row">
+          <div class="form-grp">
+            <label>Grant Type *</label>
+            <select id="sf_type" onchange="onSfType()">
+              <option value="">— Select Grant Type —</option>
+              <option value="Compassionate">Compassionate</option>
+              <option value="Emergency">Emergency</option>
+              <option value="Entrepreneurial">Entrepreneurial</option>
+              <option value="ESI">ESI</option>
+            </select>
+          </div>
+          <div class="form-grp">
+            <label>Grant Description *</label>
+            <select id="sf_desc" disabled><option value="">— Select Grant Type First —</option></select>
+          </div>
+        </div>
+        <div class="form-grp">
+          <label>Reason for Application *</label>
+          <textarea id="sf_reason" placeholder="Describe the applicant's circumstances..."></textarea>
+        </div>
+
+        <div id="sfMsg" class="status-msg" style="display:none"></div>
+        <button class="btn-submit" onclick="doStaffSubmit()">Submit Application</button>
+      </div>
+    </div>
+
+    <!-- USER MANAGEMENT TAB (Admin only) -->
+    <div id="tab-users" class="tc">
+      <!-- Add User -->
+      <div class="form-sec">
+        <h3>Add New User</h3>
+        <div class="form-row">
+          <div class="form-grp">
+            <label>Full Name</label>
+            <input type="text" id="nu_name" placeholder="Full name">
+          </div>
+          <div class="form-grp">
+            <label>Email</label>
+            <input type="email" id="nu_email" placeholder="user@email.com">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-grp">
+            <label>Password</label>
+            <input type="text" id="nu_pass" placeholder="Min 6 characters">
+          </div>
+          <div class="form-grp">
+            <label>Role</label>
+            <select id="nu_role">
+              <option value="Applicant">Applicant</option>
+              <option value="SocialWorker">Social Worker</option>
+              <option value="Admin">Admin</option>
+              <option value="Finance">Finance</option>
+            </select>
+          </div>
+        </div>
+        <div id="addUserMsg" class="status-msg" style="display:none"></div>
+        <button class="btn-submit" onclick="addUser()">Create User</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Assign Role / Reset Password -->
+      <div class="form-sec">
+        <h3>Assign Role or Reset Password</h3>
+        <div class="form-row">
+          <div class="form-grp">
+            <label>User Email</label>
+            <input type="email" id="mu_email" placeholder="user@email.com">
+          </div>
+          <div class="form-grp">
+            <label>New Role</label>
+            <select id="mu_role">
+              <option value="Applicant">Applicant</option>
+              <option value="SocialWorker">Social Worker</option>
+              <option value="Admin">Admin</option>
+              <option value="Finance">Finance</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grp">
+          <label>New Password (leave blank to keep current)</label>
+          <input type="text" id="mu_pass" placeholder="Enter new password or leave blank">
+        </div>
+        <div id="muMsg" class="status-msg" style="display:none"></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn-submit" onclick="assignRole()">Assign Role</button>
+          <button class="btn-submit" style="background:#e65100" onclick="resetPassword()">Reset Password</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- User List -->
+      <h3 style="color:#1a3a5c;margin-bottom:14px;font-size:16px;font-weight:600">All Users</h3>
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
+        <tbody id="userTable"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="/auth.js"></script>
+<script>
+  const allS = ['Submitted','Under Review','Submitted to Head Office',
+                'Under Head Office Review','Approved','Declined','Payment Issued'];
+  let currentUser = null;
+  let charts = {};
+
+  function bdg(s){const m={'Submitted':'bs','Under Review':'bu','Approved':'ba','Declined':'bd','Payment Issued':'bp'};return m[s]||'bx'}
+
+  function switchTab(n, el) {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-'+n).classList.add('active');
+    if (n==='audit') loadAudit();
+    if (n==='users') loadUsers();
+  }
+
+  // Populate parish filter
+  const pf = document.getElementById('fParish');
+  Object.keys(PARISHES).sort().forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;pf.appendChild(o);});
+
+  // Populate submit-for parish
+  const sfp = document.getElementById('sf_parish');
+  Object.keys(PARISHES).sort().forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;sfp.appendChild(o);});
+
+  function onSfParish() {
+    const p=document.getElementById('sf_parish').value, cs=document.getElementById('sf_const');
+    cs.innerHTML='<option value="">— Select Constituency —</option>';
+    if(p&&PARISHES[p]){PARISHES[p].forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o);});cs.disabled=false;}
+    else cs.disabled=true;
+  }
+
+  function onSfType() {
+    const t=document.getElementById('sf_type').value, ds=document.getElementById('sf_desc');
+    ds.innerHTML='<option value="">— Select Description —</option>';
+    if(t&&GRANT_DESCRIPTIONS[t]){GRANT_DESCRIPTIONS[t].forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;ds.appendChild(o);});ds.disabled=false;}
+    else ds.disabled=true;
+  }
+
+  async function init() {
+    currentUser = await requireStaff();
+    if (!currentUser) return;
+    document.getElementById('userName').textContent = currentUser.fullName;
+    document.getElementById('roleLabel').textContent = currentUser.roles.join(', ');
+    if (currentUser.roles.includes('Admin')) {
+      document.getElementById('tabUsers').style.display = 'block';
     }
+    loadStats();
+    loadApps();
+  }
 
-    // Populate parish filter
-    const pf = document.getElementById('fParish');
-    Object.keys(PARISHES).sort().forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;pf.appendChild(o);});
+  // ── CHARTS ─────────────────────────────────────────────
+  function destroyChart(id) { if(charts[id]){charts[id].destroy();delete charts[id];} }
 
-    async function init() {
-      currentUser = await requireStaff();
-      if (!currentUser) return;
-      document.getElementById('userName').textContent = currentUser.fullName;
-      const roles = currentUser.roles;
-      document.getElementById('roleLabel').textContent = roles.join(', ');
-      if (roles.includes('Admin')) {
-        document.getElementById('usersTab').style.display = 'block';
+  function buildCharts(s) {
+    // Status donut
+    destroyChart('status');
+    charts.status = new Chart(document.getElementById('chartStatus'), {
+      type: 'doughnut',
+      data: {
+        labels: s.byStatus.map(x=>x.status),
+        datasets:[{
+          data: s.byStatus.map(x=>x.count),
+          backgroundColor:['#e8f4fd','#fff8e1','#e8f5e9','#ffebee','#f3e5f5','#f0f4f8','#e3f2fd'],
+          borderColor:['#1a3a5c','#7f5000','#1e5c2e','#8b0000','#4a148c','#555','#1565c0'],
+          borderWidth:2
+        }]
+      },
+      options:{ plugins:{ legend:{ position:'bottom', labels:{font:{size:11}} } }, cutout:'60%' }
+    });
+
+    // Grant type bar
+    destroyChart('grantType');
+    charts.grantType = new Chart(document.getElementById('chartGrantType'), {
+      type: 'bar',
+      data: {
+        labels: s.byGrantType.map(x=>x.grantType),
+        datasets:[{
+          label:'Applications',
+          data: s.byGrantType.map(x=>x.count),
+          backgroundColor:'#1a3a5c', borderRadius:6
+        }]
+      },
+      options:{ plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}, maintainAspectRatio:true }
+    });
+
+    // Top parishes horizontal bar
+    destroyChart('parish');
+    const topParishes = [...s.byParish].slice(0, 6);
+    charts.parish = new Chart(document.getElementById('chartParish'), {
+      type: 'bar',
+      data: {
+        labels: topParishes.map(x=>x.parish),
+        datasets:[{
+          label:'Applications',
+          data: topParishes.map(x=>x.count),
+          backgroundColor:'#2c7be5', borderRadius:6
+        }]
+      },
+      options:{
+        indexAxis:'y',
+        plugins:{legend:{display:false}},
+        scales:{x:{beginAtZero:true,ticks:{stepSize:1}}},
+        maintainAspectRatio:true
       }
-      loadStats();
-      loadApps();
-    }
+    });
 
-    async function loadStats() {
-      const r = await fetch(`${API}/applications/stats`);
-      if (!r.ok) return;
-      const s = await r.json();
-      document.getElementById('sTotal').textContent     = s.total;
-      document.getElementById('sSubmitted').textContent = s.submitted;
-      document.getElementById('sReview').textContent    = s.underReview;
-      document.getElementById('sApproved').textContent  = s.approved;
-      document.getElementById('sDeclined').textContent  = s.declined;
-    }
-
-    async function loadApps() {
-      const status    = document.getElementById('fStatus').value;
-      const parish    = document.getElementById('fParish').value;
-      const applicant = document.getElementById('fApplicant').value;
-      const dateFrom  = document.getElementById('fFrom').value;
-      const dateTo    = document.getElementById('fTo').value;
-      let url = `${API}/applications?`;
-      if (status)    url += `status=${encodeURIComponent(status)}&`;
-      if (parish)    url += `parish=${encodeURIComponent(parish)}&`;
-      if (applicant) url += `applicant=${encodeURIComponent(applicant)}&`;
-      if (dateFrom)  url += `dateFrom=${encodeURIComponent(dateFrom)}&`;
-      if (dateTo)    url += `dateTo=${encodeURIComponent(dateTo)}&`;
-
-      const r    = await fetch(url);
-      if (!r.ok) { document.getElementById('appTable').innerHTML='<tr><td colspan="10" class="empty">Error loading.</td></tr>'; return; }
-      const apps = await r.json();
-      const tbody = document.getElementById('appTable');
-      if (!apps.length){ tbody.innerHTML='<tr><td colspan="10" class="empty">No applications found.</td></tr>'; return; }
-
-      const roles = currentUser ? currentUser.roles : [];
-
-      tbody.innerHTML = apps.map(a=>{
-        // Build document links
-        const docHtml = a.documentCount > 0
-          ? `<a href="${API}/documents/application/${a.id}" onclick="viewDocs(event,${a.id})" class="doc-link">📎 ${a.documentCount} file${a.documentCount>1?'s':''}</a>`
-          : '<span style="color:#ccc;font-size:12px">—</span>';
-
-        // Build status dropdown — only show if role can make transitions
-        const canUpdate = roles.includes('Admin') || roles.includes('SocialWorker') || roles.includes('Finance');
-        const statusControl = canUpdate ? `
-          <select class="ss" id="sel_${a.id}">
-            ${allS.map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
-          </select>
-          <button class="sv" onclick="updateStatus(${a.id})">Save</button>` : `<span class="badge ${bdg(a.status)}" style="font-size:12px">${a.status}</span>`;
-
-        return `<tr>
-          <td><strong>${a.id}</strong></td>
-          <td>${a.applicantName}</td>
-          <td>${a.parish}</td><td>${a.constituency}</td>
-          <td>${a.grantType}</td><td>${a.grantDescription}</td>
-          <td>${new Date(a.submittedAt).toLocaleDateString('en-JM',{year:'numeric',month:'short',day:'numeric'})}</td>
-          <td><span class="badge ${bdg(a.status)}">${a.status}</span></td>
-          <td>${docHtml}</td>
-          <td>${statusControl}</td>
-        </tr>`;
-      }).join('');
-    }
-
-    async function viewDocs(e, appId) {
-      e.preventDefault();
-      const res  = await fetch(`${API}/documents/application/${appId}`);
-      const docs = await res.json();
-      if (!docs.length) { alert('No documents attached.'); return; }
-      const list = docs.map(d=>`• ${d.fileName} (${(d.fileSize/1024).toFixed(1)} KB) — ${new Date(d.uploadedAt).toLocaleDateString()} by ${d.uploadedByName}\n  Download: ${window.location.origin}${API}/documents/${d.id}`).join('\n\n');
-      alert(`Documents for Application #${appId}:\n\n${list}`);
-    }
-
-    function clearF(){
-      document.getElementById('fStatus').value='';
-      document.getElementById('fParish').value='';
-      document.getElementById('fApplicant').value='';
-      document.getElementById('fFrom').value='';
-      document.getElementById('fTo').value='';
-      loadApps();
-    }
-
-    async function updateStatus(id) {
-      const ns   = document.getElementById(`sel_${id}`).value;
-      const just = (ns==='Approved'||ns==='Declined') ? prompt(`Justification for "${ns}" decision (required):`)||'' : null;
-      if ((ns==='Approved'||ns==='Declined') && !just) { alert('Justification is required for Approved/Declined.'); return; }
-      const res = await fetch(`${API}/applications/${id}/status`, {
-        method:'PUT', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({newStatus:ns, justification:just})
-      });
-      if (res.ok) { loadApps(); loadStats(); }
-      else {
-        const e = await res.json().catch(()=>({}));
-        alert('Error: ' + (e.message || 'Unknown error'));
+    // Timeline line chart
+    destroyChart('timeline');
+    charts.timeline = new Chart(document.getElementById('chartTimeline'), {
+      type: 'line',
+      data: {
+        labels: s.recentByDay.map(x=>x.date),
+        datasets:[{
+          label:'Submissions',
+          data: s.recentByDay.map(x=>x.count),
+          borderColor:'#1a3a5c', backgroundColor:'rgba(26,58,92,.1)',
+          fill:true, tension:.3, pointRadius:4, pointHoverRadius:6
+        }]
+      },
+      options:{
+        plugins:{legend:{display:false}},
+        scales:{y:{beginAtZero:true,ticks:{stepSize:1}}, x:{ticks:{maxTicksLimit:10}}},
+        maintainAspectRatio:false
       }
+    });
+    document.getElementById('chartTimeline').style.height = '180px';
+  }
+
+  async function loadStats() {
+    const r = await fetch(`${API}/applications/stats`);
+    if (!r.ok) return;
+    const s = await r.json();
+    document.getElementById('sTotal').textContent     = s.total;
+    document.getElementById('sSubmitted').textContent = s.submitted;
+    document.getElementById('sReview').textContent    = s.underReview;
+    document.getElementById('sApproved').textContent  = s.approved;
+    document.getElementById('sDeclined').textContent  = s.declined;
+    buildCharts(s);
+  }
+
+  // ── APPLICATIONS TAB ───────────────────────────────────
+  async function loadApps() {
+    const status    = document.getElementById('fStatus').value;
+    const parish    = document.getElementById('fParish').value;
+    const applicant = document.getElementById('fApplicant').value;
+    const dateFrom  = document.getElementById('fFrom').value;
+    const dateTo    = document.getElementById('fTo').value;
+    let url = `${API}/applications?`;
+    if (status)    url += `status=${encodeURIComponent(status)}&`;
+    if (parish)    url += `parish=${encodeURIComponent(parish)}&`;
+    if (applicant) url += `applicant=${encodeURIComponent(applicant)}&`;
+    if (dateFrom)  url += `dateFrom=${encodeURIComponent(dateFrom)}&`;
+    if (dateTo)    url += `dateTo=${encodeURIComponent(dateTo)}&`;
+
+    const r = await fetch(url);
+    if (!r.ok) { document.getElementById('appTable').innerHTML='<tr><td colspan="11" class="empty">Error loading.</td></tr>'; return; }
+    const apps = await r.json();
+    const tbody = document.getElementById('appTable');
+    const roles = currentUser ? currentUser.roles : [];
+    const canUpdate = roles.includes('Admin') || roles.includes('SocialWorker') || roles.includes('Finance');
+
+    if (!apps.length){ tbody.innerHTML='<tr><td colspan="11" class="empty">No applications found.</td></tr>'; return; }
+
+    tbody.innerHTML = apps.map(a=>{
+      const docCell = a.documentCount > 0
+        ? `<a href="#" onclick="viewDocs(event,${a.id})" style="color:#1a3a5c;font-size:12px;background:#e8f4fd;padding:2px 8px;border-radius:4px;text-decoration:none">📎 ${a.documentCount}</a>`
+        : '<span style="color:#ccc;font-size:12px">—</span>';
+      const staffBadge = a.isStaffSubmission ? '<span class="staff-badge">Staff</span> ' : '';
+      const statusCtrl = canUpdate ? `
+        <select class="ss" id="sel_${a.id}">
+          ${allS.map(s=>`<option ${s===a.status?'selected':''}>${s}</option>`).join('')}
+        </select>
+        <button class="sv" onclick="updateStatus(${a.id})">Save</button>` :
+        `<span class="badge ${bdg(a.status)}">${a.status}</span>`;
+
+      return `<tr>
+        <td><strong>${a.id}</strong></td>
+        <td>${staffBadge}${a.applicantName}</td>
+        <td style="font-size:12px">${a.applicantTRN||'—'}</td>
+        <td style="font-size:12px">${a.applicantContactNumber||'—'}</td>
+        <td>${a.parish}</td>
+        <td>${a.grantType}</td><td>${a.grantDescription}</td>
+        <td style="white-space:nowrap;font-size:12px">${new Date(a.submittedAt).toLocaleDateString('en-JM',{year:'numeric',month:'short',day:'numeric'})}</td>
+        <td><span class="badge ${bdg(a.status)}">${a.status}</span></td>
+        <td>${docCell}</td>
+        <td style="white-space:nowrap">${statusCtrl}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function viewDocs(e, appId) {
+    e.preventDefault();
+    const res  = await fetch(`${API}/documents/application/${appId}`);
+    const docs = await res.json();
+    if (!docs.length) { alert('No documents attached to this application.'); return; }
+    const lines = docs.map(d=>`• ${d.fileName} (${(d.fileSize/1024).toFixed(1)} KB)\n  Uploaded ${new Date(d.uploadedAt).toLocaleDateString()} by ${d.uploadedByName}\n  Link: ${window.location.origin}/api/documents/${d.id}`).join('\n\n');
+    alert(`Documents — Application #${appId}:\n\n${lines}`);
+  }
+
+  function clearF() {
+    ['fStatus','fParish'].forEach(id=>document.getElementById(id).value='');
+    ['fApplicant','fFrom','fTo'].forEach(id=>document.getElementById(id).value='');
+    loadApps();
+  }
+
+  async function updateStatus(id) {
+    const ns   = document.getElementById(`sel_${id}`).value;
+    const just = (ns==='Approved'||ns==='Declined') ? prompt(`Justification for "${ns}" (required):`) : null;
+    if ((ns==='Approved'||ns==='Declined') && !just) { alert('Justification is required.'); return; }
+    const res = await fetch(`${API}/applications/${id}/status`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({newStatus:ns, justification:just})
+    });
+    if (res.ok) { loadApps(); loadStats(); }
+    else { const e=await res.json().catch(()=>({})); alert('Error: '+(e.message||'Unknown error')); }
+  }
+
+  // ── AUDIT LOG TAB ──────────────────────────────────────
+  async function loadAudit() {
+    const r    = await fetch(`${API}/applications/auditlog`);
+    if (!r.ok) { document.getElementById('auditTable').innerHTML='<tr><td colspan="6" class="empty">Error.</td></tr>'; return; }
+    const logs = await r.json();
+    const tbody = document.getElementById('auditTable');
+    if (!logs.length){ tbody.innerHTML='<tr><td colspan="6" class="empty">No entries yet.</td></tr>'; return; }
+    tbody.innerHTML = logs.map(l=>`<tr>
+      <td style="font-size:12px;white-space:nowrap">${new Date(l.timestamp).toLocaleString('en-JM')}</td>
+      <td>#${l.grantApplicationId}</td>
+      <td>${l.userName||'—'}</td>
+      <td>${l.action}</td>
+      <td>${l.previousStatus||'—'}</td>
+      <td>${l.newStatus}</td>
+    </tr>`).join('');
+  }
+
+  // ── STAFF SUBMIT TAB ───────────────────────────────────
+  async function doStaffSubmit() {
+    const name    = document.getElementById('sf_name').value.trim();
+    const dob     = document.getElementById('sf_dob').value;
+    const gender  = document.getElementById('sf_gender').value;
+    const trn     = document.getElementById('sf_trn').value.trim();
+    const contact = document.getElementById('sf_contact').value.trim();
+    const parish  = document.getElementById('sf_parish').value;
+    const constit = document.getElementById('sf_const').value;
+    const type    = document.getElementById('sf_type').value;
+    const desc    = document.getElementById('sf_desc').value;
+    const reason  = document.getElementById('sf_reason').value.trim();
+
+    if (!name||!dob||!gender||!trn||!contact||!parish||!constit||!type||!desc||!reason) {
+      showSfMsg('All fields are required.', false); return;
     }
 
-    async function loadAudit() {
-      const r    = await fetch(`${API}/applications/auditlog`);
-      if (!r.ok) { document.getElementById('auditTable').innerHTML='<tr><td colspan="6" class="empty">Error loading audit log.</td></tr>'; return; }
-      const logs = await r.json();
-      const tbody = document.getElementById('auditTable');
-      if (!logs.length){ tbody.innerHTML='<tr><td colspan="6" class="empty">No audit entries yet.</td></tr>'; return; }
-      tbody.innerHTML = logs.map(l=>`<tr>
-        <td style="font-size:12px;white-space:nowrap">${new Date(l.timestamp).toLocaleString('en-JM')}</td>
-        <td>#${l.grantApplicationId}</td>
-        <td>${l.userName||l.userId.substring(0,8)}</td>
-        <td>${l.action}</td>
-        <td>${l.previousStatus||'—'}</td>
-        <td>${l.newStatus}</td>
-      </tr>`).join('');
-    }
+    const res = await fetch(`${API}/applications/staff-submit`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        applicantFullName:name, dateOfBirth:dob, gender, trn, contactNumber:contact,
+        parish, constituency:constit, grantType:type, grantDescription:desc, reason
+      })
+    });
 
-    async function assignRole() {
-      const email = document.getElementById('roleEmail').value.trim();
-      const role  = document.getElementById('roleSelect').value;
-      const msg   = document.getElementById('roleMsg');
-      if (!email) { msg.style.color='#c0392b'; msg.textContent='Please enter an email address.'; return; }
-      const res = await fetch(`${API}/auth/assign-role`, {
+    if (res.ok) {
+      const d = await res.json();
+      showSfMsg(`✓ Application #${d.id} submitted for ${name}`, true);
+      // Clear form
+      ['sf_name','sf_dob','sf_trn','sf_contact','sf_reason'].forEach(id=>document.getElementById(id).value='');
+      ['sf_gender','sf_parish','sf_type'].forEach(id=>document.getElementById(id).value='');
+      document.getElementById('sf_const').innerHTML='<option value="">— Select Parish First —</option>';
+      document.getElementById('sf_const').disabled=true;
+      document.getElementById('sf_desc').innerHTML='<option value="">— Select Grant Type First —</option>';
+      document.getElementById('sf_desc').disabled=true;
+      loadApps(); loadStats();
+    } else {
+      const e = await res.json().catch(()=>({}));
+      showSfMsg(e.message||'Submission failed.', false);
+    }
+  }
+
+  function showSfMsg(text, ok) {
+    const el = document.getElementById('sfMsg');
+    el.style.display='block'; el.className='status-msg '+(ok?'s-ok':'s-err'); el.textContent=text;
+  }
+
+  // ── USER MANAGEMENT TAB ────────────────────────────────
+  async function loadUsers() {
+    const r = await fetch(`${API}/auth/users`);
+    if (!r.ok) { document.getElementById('userTable').innerHTML='<tr><td colspan="4" class="empty">Error loading users.</td></tr>'; return; }
+    const users = await r.json();
+    const roleColors = {'Admin':'#e8f4fd','SocialWorker':'#fff8e1','Finance':'#f3e5f5','Applicant':'#e8f5e9'};
+    const roleText   = {'Admin':'#1a3a5c','SocialWorker':'#7f5000','Finance':'#4a148c','Applicant':'#1e5c2e'};
+    document.getElementById('userTable').innerHTML = users.map(u=>`<tr>
+      <td>${u.fullName}</td>
+      <td>${u.email}</td>
+      <td>
+        <span style="background:${roleColors[u.role]||'#f0f4f8'};color:${roleText[u.role]||'#555'};padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600">
+          ${u.role}
+        </span>
+      </td>
+      <td>
+        <button class="btn-sm btn-pw" onclick="quickSetEmail('${u.email}')">Edit</button>
+        <button class="btn-sm btn-del" style="margin-left:6px" onclick="deleteUser('${u.email}','${u.fullName}')">Delete</button>
+      </td>
+    </tr>`).join('');
+  }
+
+  function quickSetEmail(email) {
+    document.getElementById('mu_email').value = email;
+    document.getElementById('mu_pass').value  = '';
+    document.getElementById('mu_email').scrollIntoView({behavior:'smooth'});
+  }
+
+  async function addUser() {
+    const fullName = document.getElementById('nu_name').value.trim();
+    const email    = document.getElementById('nu_email').value.trim();
+    const password = document.getElementById('nu_pass').value;
+    const role     = document.getElementById('nu_role').value;
+    const msg = document.getElementById('addUserMsg');
+    if (!fullName||!email||!password) { showMsg(msg,'All fields are required.',false); return; }
+
+    // Register then assign role
+    const r1 = await fetch(`${API}/auth/register`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({fullName, email, password})
+    });
+    if (!r1.ok) { const e=await r1.json().catch(()=>({})); showMsg(msg,e.message||'Registration failed.',false); return; }
+
+    if (role !== 'Applicant') {
+      await fetch(`${API}/auth/assign-role`, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({email, role})
       });
-      const data = await res.json().catch(()=>({}));
-      if (res.ok) { msg.style.color='#1e5c2e'; msg.textContent=data.message||'Role assigned.'; }
-      else        { msg.style.color='#c0392b'; msg.textContent=data.message||'Failed to assign role.'; }
     }
 
-    init();
-  </script>
+    showMsg(msg, `✓ User ${email} created as ${role}`, true);
+    ['nu_name','nu_email','nu_pass'].forEach(id=>document.getElementById(id).value='');
+    loadUsers();
+  }
+
+  async function assignRole() {
+    const email = document.getElementById('mu_email').value.trim();
+    const role  = document.getElementById('mu_role').value;
+    const msg   = document.getElementById('muMsg');
+    if (!email) { showMsg(msg,'Enter a user email.',false); return; }
+    const res = await fetch(`${API}/auth/assign-role`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, role})
+    });
+    const d = await res.json().catch(()=>({}));
+    showMsg(msg, d.message||(res.ok?'Done':'Failed'), res.ok);
+    if (res.ok) loadUsers();
+  }
+
+  async function resetPassword() {
+    const email    = document.getElementById('mu_email').value.trim();
+    const password = document.getElementById('mu_pass').value;
+    const msg      = document.getElementById('muMsg');
+    if (!email||!password) { showMsg(msg,'Enter email and new password.',false); return; }
+    const res = await fetch(`${API}/auth/reset-password`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, newPassword:password})
+    });
+    const d = await res.json().catch(()=>({}));
+    showMsg(msg, d.message||(res.ok?'Password reset':'Failed'), res.ok);
+  }
+
+  async function deleteUser(email, name) {
+    if (!confirm(`Delete user ${name} (${email})? This cannot be undone.`)) return;
+    const res = await fetch(`${API}/auth/users/${encodeURIComponent(email)}`, {method:'DELETE'});
+    const d   = await res.json().catch(()=>({}));
+    const msg = document.getElementById('muMsg');
+    showMsg(msg, d.message||(res.ok?'Deleted':'Failed'), res.ok);
+    if (res.ok) loadUsers();
+  }
+
+  function showMsg(el, text, ok) {
+    el.style.display='block'; el.className='status-msg '+(ok?'s-ok':'s-err'); el.textContent=text;
+  }
+
+  init();
+</script>
 </body>
 </html>
