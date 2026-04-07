@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAMS — New Application</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f4f8}
+    header{background:#1a3a5c;color:#fff;padding:0 28px;height:62px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+    .logo{font-size:21px;font-weight:700;letter-spacing:2px}
+    .back{padding:8px 18px;border-radius:6px;border:1.5px solid rgba(255,255,255,.5);background:transparent;color:#fff;cursor:pointer;font-size:13px;font-weight:600;text-decoration:none;display:inline-block}
+    .back:hover{background:rgba(255,255,255,.1)}
+    .container{padding:28px;max-width:720px;margin:0 auto}
+    .title{font-size:22px;font-weight:700;color:#1a3a5c;margin-bottom:6px}
+    .sub{font-size:13px;color:#888;margin-bottom:26px}
+    .card{background:#fff;border-radius:10px;padding:32px;box-shadow:0 2px 12px rgba(0,0,0,.07);margin-bottom:20px}
+    .sec{font-size:12px;font-weight:700;color:#1a3a5c;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e8f0fa}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:14px}
+    .grp{margin-bottom:14px}
+    label{display:block;font-size:11px;font-weight:700;color:#666;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+    label span{color:#c0392b}
+    select,textarea,input[type=text],input[type=date],input[type=tel]{width:100%;padding:11px 13px;border:1.5px solid #e0e6ef;border-radius:7px;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;background:#fff}
+    select:focus,textarea:focus,input:focus{border-color:#1a3a5c;box-shadow:0 0 0 3px rgba(26,58,92,.06)}
+    select:disabled{background:#f5f5f5;color:#aaa;cursor:not-allowed}
+    textarea{height:100px;resize:vertical}
+    .err{color:#c0392b;font-size:11px;min-height:15px;margin-top:3px}
+    hr{margin:20px 0;border:none;border-top:1px solid #edf0f5}
+    .file-zone{border:2px dashed #dde3ec;border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s}
+    .file-zone:hover{border-color:#1a3a5c;background:#f8faff}
+    .file-zone p{color:#888;font-size:13px}
+    #fileList{margin-top:10px}
+    .file-item{display:flex;align-items:center;justify-content:space-between;background:#f0f7ff;border-radius:6px;padding:8px 12px;margin-bottom:6px;font-size:13px}
+    .file-item button{background:none;border:none;color:#c0392b;cursor:pointer;font-size:16px;line-height:1}
+    .actions{display:flex;gap:12px;justify-content:flex-end;margin-top:24px}
+    .btn-sub{padding:12px 28px;background:#1a3a5c;color:#fff;border:none;border-radius:7px;font-size:15px;font-weight:600;cursor:pointer;transition:background .2s}
+    .btn-sub:hover{background:#2c5282}
+    .btn-sub:disabled{opacity:.6;cursor:not-allowed}
+    .btn-can{padding:12px 22px;background:#f0f4f8;color:#555;border:none;border-radius:7px;font-size:15px;cursor:pointer}
+    #msg{text-align:center;margin-top:14px;font-size:14px;min-height:20px;padding:10px;border-radius:6px}
+    .msg-ok{background:#e8f5e9;color:#1e5c2e}
+    .msg-err{background:#ffebee;color:#8b0000}
+    .note{font-size:12px;color:#888;margin-bottom:18px}
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">GAMS</span>
+    <a href="/dashboard.html" class="back">← Back to Dashboard</a>
+  </header>
+  <div class="container">
+    <div class="title">New Grant Application</div>
+    <div class="sub">Complete all required fields to submit your application.</div>
+    <div class="card">
+      <p class="note">Fields marked <span style="color:#c0392b">*</span> are required.</p>
+
+      <!-- PERSONAL DETAILS -->
+      <div class="sec">Personal Information</div>
+      <div class="row">
+        <div>
+          <label>Date of Birth <span>*</span></label>
+          <input type="date" id="dob">
+          <div class="err" id="dobErr"></div>
+        </div>
+        <div>
+          <label>Gender <span>*</span></label>
+          <select id="gender">
+            <option value="">— Select Gender —</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+          <div class="err" id="genderErr"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>TRN (Tax Registration Number) <span>*</span></label>
+          <input type="text" id="trn" placeholder="000-000-000">
+          <div class="err" id="trnErr"></div>
+        </div>
+        <div>
+          <label>Contact Number <span>*</span></label>
+          <input type="tel" id="contact" placeholder="876-XXX-XXXX">
+          <div class="err" id="contactErr"></div>
+        </div>
+      </div>
+
+      <hr>
+      <!-- LOCATION -->
+      <div class="sec">Location</div>
+      <div class="row">
+        <div>
+          <label>Parish <span>*</span></label>
+          <select id="parish" onchange="onParish()"><option value="">— Select Parish —</option></select>
+          <div class="err" id="parishErr"></div>
+        </div>
+        <div>
+          <label>Constituency <span>*</span></label>
+          <select id="constituency" disabled><option value="">— Select Parish First —</option></select>
+          <div class="err" id="constErr"></div>
+        </div>
+      </div>
+
+      <hr>
+      <!-- GRANT INFO -->
+      <div class="sec">Grant Information</div>
+      <div class="row">
+        <div>
+          <label>Grant Type <span>*</span></label>
+          <select id="grantType" onchange="onType()">
+            <option value="">— Select Grant Type —</option>
+            <option value="Compassionate">Compassionate</option>
+            <option value="Emergency">Emergency</option>
+            <option value="Entrepreneurial">Entrepreneurial</option>
+            <option value="ESI">ESI</option>
+          </select>
+          <div class="err" id="typeErr"></div>
+        </div>
+        <div>
+          <label>Grant Description <span>*</span></label>
+          <select id="grantDesc" disabled><option value="">— Select Grant Type First —</option></select>
+          <div class="err" id="descErr"></div>
+        </div>
+      </div>
+
+      <hr>
+      <!-- REASON -->
+      <div class="sec">Application Details</div>
+      <div class="grp">
+        <label>Reason for Application <span>*</span></label>
+        <textarea id="reason" placeholder="Describe your circumstances and why you are applying..."></textarea>
+        <div class="err" id="reasonErr"></div>
+      </div>
+
+      <hr>
+      <!-- DOCUMENTS -->
+      <div class="sec">Supporting Documents <span style="font-weight:400;font-size:11px;color:#888">(Optional — PDF, Word, JPG, PNG, max 10 MB each)</span></div>
+      <div class="file-zone" onclick="document.getElementById('fileInput').click()">
+        <p>📎 Click to select files to attach</p>
+        <p style="font-size:11px;margin-top:4px;color:#aaa">PDF, Word, JPG, PNG accepted</p>
+      </div>
+      <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:none" onchange="onFilesSelected()">
+      <div id="fileList"></div>
+
+      <div class="actions">
+        <button class="btn-can" onclick="window.location.href='/dashboard.html'">Cancel</button>
+        <button class="btn-sub" id="submitBtn" onclick="doSubmit()">Submit Application</button>
+      </div>
+      <div id="msg"></div>
+    </div>
+  </div>
+
+  <script src="/auth.js"></script>
+  <script>
+    let selectedFiles = [];
+
+    // Populate parish
+    const ps = document.getElementById('parish');
+    Object.keys(PARISHES).sort().forEach(p => {
+      const o = document.createElement('option');
+      o.value=p; o.textContent=p; ps.appendChild(o);
+    });
+
+    function onParish() {
+      const p = document.getElementById('parish').value;
+      const cs = document.getElementById('constituency');
+      cs.innerHTML='<option value="">— Select Constituency —</option>';
+      if (p && PARISHES[p]) {
+        PARISHES[p].forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;cs.appendChild(o);});
+        cs.disabled=false;
+      } else { cs.disabled=true; }
+    }
+
+    function onType() {
+      const t = document.getElementById('grantType').value;
+      const ds = document.getElementById('grantDesc');
+      ds.innerHTML='<option value="">— Select Description —</option>';
+      if (t && GRANT_DESCRIPTIONS[t]) {
+        GRANT_DESCRIPTIONS[t].forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;ds.appendChild(o);});
+        ds.disabled=false;
+      } else { ds.disabled=true; }
+    }
+
+    function onFilesSelected() {
+      const input = document.getElementById('fileInput');
+      Array.from(input.files).forEach(f => {
+        if (!selectedFiles.find(x=>x.name===f.name)) selectedFiles.push(f);
+      });
+      renderFileList();
+      input.value='';
+    }
+
+    function removeFile(name) {
+      selectedFiles = selectedFiles.filter(f=>f.name!==name);
+      renderFileList();
+    }
+
+    function renderFileList() {
+      const el = document.getElementById('fileList');
+      if (!selectedFiles.length) { el.innerHTML=''; return; }
+      el.innerHTML = selectedFiles.map(f=>`
+        <div class="file-item">
+          <span>📎 ${f.name} <span style="color:#aaa;font-size:11px">(${(f.size/1024).toFixed(1)} KB)</span></span>
+          <button onclick="removeFile('${f.name.replace(/'/g,"\\'")}')">×</button>
+        </div>`).join('');
+    }
+
+    async function doSubmit() {
+      // Clear all errors
+      ['dobErr','genderErr','trnErr','contactErr','parishErr','constErr','typeErr','descErr','reasonErr']
+        .forEach(id=>document.getElementById(id).textContent='');
+
+      const dob              = document.getElementById('dob').value;
+      const gender           = document.getElementById('gender').value;
+      const trn              = document.getElementById('trn').value.trim();
+      const contact          = document.getElementById('contact').value.trim();
+      const parish           = document.getElementById('parish').value;
+      const constituency     = document.getElementById('constituency').value;
+      const grantType        = document.getElementById('grantType').value;
+      const grantDescription = document.getElementById('grantDesc').value;
+      const reason           = document.getElementById('reason').value.trim();
+
+      let ok = true;
+      if (!dob)              { document.getElementById('dobErr').textContent='Date of birth is required.'; ok=false; }
+      if (!gender)           { document.getElementById('genderErr').textContent='Please select gender.'; ok=false; }
+      if (!trn)              { document.getElementById('trnErr').textContent='TRN is required.'; ok=false; }
+      if (!contact)          { document.getElementById('contactErr').textContent='Contact number is required.'; ok=false; }
+      if (!parish)           { document.getElementById('parishErr').textContent='Please select a parish.'; ok=false; }
+      if (!constituency)     { document.getElementById('constErr').textContent='Please select a constituency.'; ok=false; }
+      if (!grantType)        { document.getElementById('typeErr').textContent='Please select a grant type.'; ok=false; }
+      if (!grantDescription) { document.getElementById('descErr').textContent='Please select a grant description.'; ok=false; }
+      if (!reason)           { document.getElementById('reasonErr').textContent='Please describe your reason.'; ok=false; }
+      if (!ok) return;
+
+      const btn   = document.getElementById('submitBtn');
+      const msgEl = document.getElementById('msg');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+      msgEl.className = '';
+      msgEl.textContent = '';
+
+      try {
+        const res = await fetch(`${API}/applications`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            dateOfBirth: dob, gender, trn, contactNumber: contact,
+            parish, constituency, grantType, grantDescription, reason
+          })
+        });
+
+        if (!res.ok) {
+          const e = await res.json().catch(()=>({}));
+          msgEl.className = 'msg-err';
+          msgEl.textContent = e.message || 'Submission failed. Please try again.';
+          btn.disabled=false; btn.textContent='Submit Application';
+          return;
+        }
+
+        const data  = await res.json();
+        const appId = data.id;
+
+        // Upload documents
+        if (selectedFiles.length > 0) {
+          msgEl.className = 'msg-ok';
+          msgEl.textContent = `Application #${appId} submitted! Uploading ${selectedFiles.length} document(s)...`;
+          for (const file of selectedFiles) {
+            const fd = new FormData();
+            fd.append('file', file);
+            await fetch(`${API}/documents/upload/${appId}`, {method:'POST', body:fd});
+          }
+        }
+
+        msgEl.className = 'msg-ok';
+        msgEl.textContent = `✓ Application #${appId} submitted! A confirmation email has been sent. Redirecting to dashboard...`;
+
+        // FIXED REDIRECT — goes back to dashboard after 2 seconds
+        setTimeout(() => { window.location.href = '/dashboard.html'; }, 2000);
+
+      } catch(e) {
+        msgEl.className = 'msg-err';
+        msgEl.textContent = 'Network error. Please check your connection and try again.';
+        btn.disabled=false; btn.textContent='Submit Application';
+      }
+    }
+
+    requireApplicant();
+  </script>
+</body>
+</html>
